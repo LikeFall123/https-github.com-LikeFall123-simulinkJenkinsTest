@@ -3,34 +3,30 @@ def pipelineGenerationPath = ""
 
 node('simulink-test-jenkins-agent-label'){
     
-    // 1. SET YOUR MATLAB R2025a PATH HERE
-    // We explicitly tell Jenkins where the support packages are.
-    def matlabver
-    stage('Run MATLAB Command') {
-        matlabver = tool 'MATLAB R2025a'
-        if (isUnix()) {
-            env.PATH = "${matlabver}/bin:${env.PATH}"   // Linux or macOS agent
-        } else {
-            env.PATH = "${matlabver}\\bin;${env.PATH}"   // Windows agent
-        }     
-    }
+    // 1. DEFINE THE CRITICAL PATH
+    // This is the location where the CI Pipeline toolbox lives.
+    def matlabSupportPkgRoot = "C:\\ProgramData\\MATLAB\\SupportPackages\\R2025a"
+    
+    pipelineGenerationPath = "${env.MW_RELATIVE_PROJECT_PATH?:''}${env.MW_PIPELINE_GEN_DIRECTORY}"
     
     stage('Pipeline Generation'){
         cleanWs(disableDeferredWipeout:true, deleteDirs:true)
         def scmVars = checkout scm
         
         // 2. COPY UTILITIES
-        // We use the variable defined above to construct the copy command.
-        // We use double quotes " " so that ${matlabSupportPkgRoot} is replaced by the actual path.
         def command = "copy /Y \"${matlabSupportPkgRoot}\\toolbox\\padv\\pipeline_generator\\ci\\templates\\jenkins\\MW_PipelineUtils.groovy\" \"$WORKSPACE\""
-        
         bat(command)
         
-        // 3. GENERATE PIPELINE
+        // 3. GENERATE PIPELINE WITH FORCED PATH
         def pipelineUtils = load("$WORKSPACE/MW_PipelineUtils.groovy")
         
-        // Running generation (False = Windows environment)
-        pipelineUtils.runShellCommand("matlab -batch \"addpath('$WORKSPACE');generate_jenkins_pipeline();\"", false)
+        // --- THE FIX IS HERE ---
+        // We inject a command to RECURSIVELY add the Support Package folder to the path.
+        // We also run 'ver' to print the toolboxes to the log so you can prove it loaded.
+        def matlabCommand = "matlab -batch \"addpath(genpath('${matlabSupportPkgRoot}')); addpath('$WORKSPACE'); ver; generate_jenkins_pipeline();\""
+        // -----------------------
+        
+        pipelineUtils.runShellCommand(matlabCommand, false)
         
         stash includes:"${pipelineGenerationPath}/**", name:'pipeline_generated_files'
         archiveArtifacts artifacts: "${pipelineGenerationPath}/**", allowEmptyArchive: true
@@ -39,6 +35,4 @@ node('simulink-test-jenkins-agent-label'){
 }
 
 // 4. EXECUTE THE TESTS
-// We load the generated pipeline OUTSIDE the node block.
-// This ensures the tests (which are a declarative pipeline) actually run.
 load("${WORKSPACE}/${pipelineGenerationPath}/simulink_pipeline")
