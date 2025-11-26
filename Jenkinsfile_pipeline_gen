@@ -5,9 +5,15 @@ node('simulink-test-jenkins-agent-label'){
     
     // 1. SET YOUR MATLAB R2025a PATH HERE
     // We explicitly tell Jenkins where the support packages are.
-    def matlabSupportPkgRoot = "C:\\ProgramData\\MATLAB\\SupportPackages\\R2025a"
-    
-    pipelineGenerationPath = "${env.MW_RELATIVE_PROJECT_PATH?:''}${env.MW_PIPELINE_GEN_DIRECTORY}"
+    def matlabver
+    stage('Run MATLAB Command') {
+        matlabver = tool 'MATLAB R2025a'
+        if (isUnix()) {
+            env.PATH = "${matlabver}/bin:${env.PATH}"   // Linux or macOS agent
+        } else {
+            env.PATH = "${matlabver}\\bin;${env.PATH}"   // Windows agent
+        }     
+    }
     
     stage('Pipeline Generation'){
         cleanWs(disableDeferredWipeout:true, deleteDirs:true)
