@@ -9,7 +9,7 @@ function generate_jenkins_pipeline()
 
     cp = openProject(strcat(workspace,filesep,string(relativeProjectPath)));
     op = padv.pipeline.JenkinsOptions;
-    op.AgentLabel = "<Jenkins agent label>";
+    op.AgentLabel = "Built-In Node";
     op.PipelineArchitecture = "SerialStagesGroupPerTask";
     op.GeneratorVersion = 2;
     op.SupportPackageRoot = supportPackageRoot;
@@ -21,7 +21,7 @@ function generate_jenkins_pipeline()
     op.RemoteBuildCacheName = remoteBuildCacheName;
 
     op.ArtifactServiceMode = 'network';         % network/jfrog/s3/azure_blob
-    op.NetworkStoragePath = '<Network storage path>';
+    op.NetworkStoragePath = '/artifactManagement/cacheStorage';
     % op.ArtifactoryUrl = '<JFrog Artifactory url>';
     % op.ArtifactoryRepoName = '<JFrog Artifactory repo name>';
     % op.S3BucketName = '<AWS S3 bucket name>';
