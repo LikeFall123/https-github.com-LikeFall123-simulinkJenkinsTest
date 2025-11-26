@@ -1,23 +1,11 @@
 // Copyright 2025 The MathWorks, Inc.
 node('simulink-test-jenkins-agent-label'){
+
     // For the online configuration guide visit: https://www.mathworks.com/help/slcheck/padv/ug/integrate-process-into-jenkins-with-artifact-management.html
     env.MW_SUPPORT_PACKAGE_ROOT = 'C:\\ProgramData\\MATLAB\\SupportPackages\\R2025a'
-    // env.MW_RELATIVE_PROJECT_PATH = "<Project relative path from repository root>";  // e.g. "" or "relative/path/to/project/"
     env.MW_REMOTE_BUILD_CACHE_NAME = "$JOB_NAME"
     env.MW_PIPELINE_GEN_DIRECTORY = "_pipelineGen_"
-    // Note: You should never hardcode secrets or tokens in the Jenkinsfile.
-    // For JFrog Artifactory storage services, You need to set the JFrog API token in Jenkins credentials with 'ARTIFACTORY_API_TOKEN_SECRET' ID.
-    // withCredentials([string( credentialsId: 'ARTIFACTORY_API_TOKEN_SECRET',variable: 'artifactory_api_token')]) {
-    //     env.ARTIFACTORY_API_TOKEN = artifactory_api_token
-    // }
-    // For S3 storage services, you need to set AWS S3 access key in Jenkins credentials with 'S3_AWS_SECRET_ACCESS_KEY_SECRET' ID.
-    // withCredentials([string( credentialsId: 'S3_AWS_SECRET_ACCESS_KEY_SECRET',variable: 's3_access_key')]) {
-    //     env.S3_AWS_SECRET_ACCESS_KEY = s3_access_key
-    // }
-    // For Azure Blob storage services, you need to set the Azure storage account connection string in Jenkins credentials with the 'AZ_CONNECTION_STRING_SECRET' ID.
-    // withCredentials([string( credentialsId: 'AZ_CONNECTION_STRING_SECRET',variable: 'az_connection_string')]) {
-    //     env.AZ_CONNECTION_STRING = az_connection_string
-    // }
+
 
     def matlabver
     stage('Run MATLAB Command') {
