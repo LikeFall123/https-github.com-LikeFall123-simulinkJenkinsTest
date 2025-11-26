@@ -3,36 +3,36 @@ def pipelineGenerationPath = ""
 
 node('simulink-test-jenkins-agent-label'){
     
+    // 1. SET YOUR MATLAB R2025a PATH HERE
+    // We explicitly tell Jenkins where the support packages are.
+    def matlabSupportPkgRoot = "C:\\ProgramData\\MATLAB\\SupportPackages\\R2025a"
+    
     pipelineGenerationPath = "${env.MW_RELATIVE_PROJECT_PATH?:''}${env.MW_PIPELINE_GEN_DIRECTORY}"
     
     stage('Pipeline Generation'){
         cleanWs(disableDeferredWipeout:true, deleteDirs:true)
         def scmVars = checkout scm
         
-        // --- FIX IS HERE ---
-        // 1. We define the root path. We try the Env Var first, defaulting to the path we saw in your logs.
-        def supportPkgRoot = env.MW_SUPPORT_PACKAGE_ROOT ?: "C:\\ProgramData\\MATLAB\\SupportPackages\\R2025a"
-        
-        // 2. We construct the copy command using the resolved variable
-        def command = "copy /Y \"${supportPkgRoot}\\toolbox\\padv\\pipeline_generator\\ci\\templates\\jenkins\\MW_PipelineUtils.groovy\" \"$WORKSPACE\""
+        // 2. COPY UTILITIES
+        // We use the variable defined above to construct the copy command.
+        // We use double quotes " " so that ${matlabSupportPkgRoot} is replaced by the actual path.
+        def command = "copy /Y \"${matlabSupportPkgRoot}\\toolbox\\padv\\pipeline_generator\\ci\\templates\\jenkins\\MW_PipelineUtils.groovy\" \"$WORKSPACE\""
         
         bat(command)
-        // -------------------
-
+        
+        // 3. GENERATE PIPELINE
         def pipelineUtils = load("$WORKSPACE/MW_PipelineUtils.groovy")
         
-        // Generating Process Advisor's process pipeline
-        // Note: Using 'false' for isUnixEnvironment since you are on Windows
+        // Running generation (False = Windows environment)
         pipelineUtils.runShellCommand("matlab -batch \"addpath('$WORKSPACE');generate_jenkins_pipeline();\"", false)
         
-        // Stash the generated file so we can retrieve it if the workspace is wiped or moved
         stash includes:"${pipelineGenerationPath}/**", name:'pipeline_generated_files'
-        
         archiveArtifacts artifacts: "${pipelineGenerationPath}/**", allowEmptyArchive: true
         pipelineUtils.loadEnvVariables(false, scmVars.GIT_COMMIT)
     }
 }
 
-// Load and Execute the Pipeline OUTSIDE the node block
-// This fixes the "Tests didn't run" issue
+// 4. EXECUTE THE TESTS
+// We load the generated pipeline OUTSIDE the node block.
+// This ensures the tests (which are a declarative pipeline) actually run.
 load("${WORKSPACE}/${pipelineGenerationPath}/simulink_pipeline")
