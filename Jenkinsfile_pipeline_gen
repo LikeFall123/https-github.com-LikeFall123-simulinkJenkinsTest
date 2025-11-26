@@ -24,9 +24,15 @@ node('simulink-test-jenkins-agent-label'){
         cleanWs(disableDeferredWipeout:true, deleteDirs:true);def scmVars=checkout scm;
         
         // Loading pipeline utilities script
-        def command = "cp -r $MW_SUPPORT_PACKAGE_ROOT/toolbox/padv/pipeline_generator/ci/templates/jenkins/MW_PipelineUtils.groovy $WORKSPACE"
+        def command = ""
         def isUnixEnvironment = isUnix()
-        if (isUnixEnvironment == true){ sh(command) } else { bat(command)}
+        if (isUnixEnvironment == true){
+            command = "cp -r $MW_SUPPORT_PACKAGE_ROOT/toolbox/padv/pipeline_generator/ci/templates/jenkins/MW_PipelineUtils.groovy $WORKSPACE"
+            sh(command) 
+        } else {
+            command = "copy /Y $MW_SUPPORT_PACKAGE_ROOT\\toolbox\\padv\\pipeline_generator\\ci\\templates\\jenkins\\MW_PipelineUtils.groovy $WORKSPACE"
+            bat(command)
+        }
         def pipelineUtils = load("$WORKSPACE/MW_PipelineUtils.groovy")
 
         // Generating Process Advisor's process pipeline
