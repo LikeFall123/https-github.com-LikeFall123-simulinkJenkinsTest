@@ -1,44 +1,42 @@
-// Copyright 2025 The MathWorks, Inc.
+
+
+// Define path variable outside to ensure scope visibility
+def pipelineGenerationPath = ""
+
 node('simulink-test-jenkins-agent-label'){
-
-    // For the online configuration guide visit: https://www.mathworks.com/help/slcheck/padv/ug/integrate-process-into-jenkins-with-artifact-management.html
-    env.MW_SUPPORT_PACKAGE_ROOT = 'C:\\ProgramData\\MATLAB\\SupportPackages\\R2025a'
-    env.MW_REMOTE_BUILD_CACHE_NAME = "$JOB_NAME"
-    env.MW_PIPELINE_GEN_DIRECTORY = "_pipelineGen_"
-
-
-    def matlabver
-    stage('Run MATLAB Command') {
-        matlabver = tool 'MATLAB R2025a'
-        if (isUnix()) {
-            env.PATH = "${matlabver}/bin:${env.PATH}"   // Linux or macOS agent
-        } else {
-            env.PATH = "${matlabver}\\bin;${env.PATH}"   // Windows agent
-        }     
-    }
     
-    def pipelineGenerationPath = "${env.MW_RELATIVE_PROJECT_PATH?:''}${env.MW_PIPELINE_GEN_DIRECTORY}"
+    pipelineGenerationPath = "${env.MW_RELATIVE_PROJECT_PATH?:''}${env.MW_PIPELINE_GEN_DIRECTORY}"
+    
     stage('Pipeline Generation'){
-        cleanWs(disableDeferredWipeout:true, deleteDirs:true);def scmVars=checkout scm;
+        cleanWs(disableDeferredWipeout:true, deleteDirs:true);
+        def scmVars=checkout scm;
         
         // Loading pipeline utilities script
-        def command = ""
-        def isUnixEnvironment = isUnix()
-        if (isUnixEnvironment == true){
-            command = "cp -r $MW_SUPPORT_PACKAGE_ROOT/toolbox/padv/pipeline_generator/ci/templates/jenkins/MW_PipelineUtils.groovy $WORKSPACE"
-            sh(command) 
-        } else {
-            command = "copy /Y $MW_SUPPORT_PACKAGE_ROOT\\toolbox\\padv\\pipeline_generator\\ci\\templates\\jenkins\\MW_PipelineUtils.groovy $WORKSPACE"
-            bat(command)
-        }
+        def command = "copy /Y $MW_SUPPORT_PACKAGE_ROOT\\toolbox\\padv\\pipeline_generator\\ci\\templates\\jenkins\\MW_PipelineUtils.groovy $WORKSPACE"
+        bat(command)
+        
         def pipelineUtils = load("$WORKSPACE/MW_PipelineUtils.groovy")
-
+        
         // Generating Process Advisor's process pipeline
-        pipelineUtils.runShellCommand("matlab -batch \"addpath('$WORKSPACE');generate_jenkins_pipeline();\"", isUnixEnvironment)
+        pipelineUtils.runShellCommand("matlab -batch \"addpath('$WORKSPACE');generate_jenkins_pipeline();\"", false)
+        
+        // IMPORTANT: Stash the generated file so we can retrieve it outside this node if needed
+        // (Though on localhost, the workspace persists, this is best practice)
         stash includes:"${pipelineGenerationPath}/**", name:'pipeline_generated_files'
+        
         archiveArtifacts artifacts: "${pipelineGenerationPath}/**", allowEmptyArchive: true
-        pipelineUtils.loadEnvVariables(isUnixEnvironment, scmVars.GIT_COMMIT)
+        pipelineUtils.loadEnvVariables(false, scmVars.GIT_COMMIT)
     }
+    // We are done with the generation node.
+} 
 
-    load("$WORKSPACE/${pipelineGenerationPath}/simulink_pipeline")
-}
+// --- OUTSIDE THE NODE BLOCK ---
+
+// Now we load and execute the generated pipeline. 
+// Note: Since you are on localhost, the file physically exists at $WORKSPACE.
+// In a distributed setup, you might need to allocate a node to unstash it, 
+// but 'load' usually runs on the Controller (Master).
+
+// If the generated file is Declarative (starts with 'pipeline'), 
+// loading it here allows it to allocate its own nodes and run.
+load("${WORKSPACE}/${pipelineGenerationPath}/simulink_pipeline")
