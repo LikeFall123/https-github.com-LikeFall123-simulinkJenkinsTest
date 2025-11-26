@@ -18,6 +18,16 @@ node('simulink-test-jenkins-agent-label'){
     // withCredentials([string( credentialsId: 'AZ_CONNECTION_STRING_SECRET',variable: 'az_connection_string')]) {
     //     env.AZ_CONNECTION_STRING = az_connection_string
     // }
+
+    def matlabver
+    stage('Run MATLAB Command') {
+        matlabver = tool 'MATLAB R2025a'
+        if (isUnix()) {
+            env.PATH = "${matlabver}/bin:${env.PATH}"   // Linux or macOS agent
+        } else {
+            env.PATH = "${matlabver}\\bin;${env.PATH}"   // Windows agent
+        }     
+    }
     
     def pipelineGenerationPath = "${env.MW_RELATIVE_PROJECT_PATH?:''}${env.MW_PIPELINE_GEN_DIRECTORY}"
     stage('Pipeline Generation'){
