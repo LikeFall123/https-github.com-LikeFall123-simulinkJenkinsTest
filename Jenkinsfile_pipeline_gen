@@ -1,5 +1,5 @@
 // Copyright 2025 The MathWorks, Inc.
-node('Built-In Node'){
+node('simulink-test-jenkins-agent-label'){
     // For the online configuration guide visit: https://www.mathworks.com/help/slcheck/padv/ug/integrate-process-into-jenkins-with-artifact-management.html
     env.MW_SUPPORT_PACKAGE_ROOT = 'C:\\ProgramData\\MATLAB\\SupportPackages\\R2025a\\bin'
     // env.MW_RELATIVE_PROJECT_PATH = "<Project relative path from repository root>";  // e.g. "" or "relative/path/to/project/"
