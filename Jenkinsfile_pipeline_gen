@@ -1,7 +1,7 @@
 // Copyright 2025 The MathWorks, Inc.
 node('simulink-test-jenkins-agent-label'){
     // For the online configuration guide visit: https://www.mathworks.com/help/slcheck/padv/ug/integrate-process-into-jenkins-with-artifact-management.html
-    env.MW_SUPPORT_PACKAGE_ROOT = 'C:\\ProgramData\\MATLAB\\SupportPackages\\R2025a\\bin'
+    env.MW_SUPPORT_PACKAGE_ROOT = 'C:/ProgramData/MATLAB/SupportPackages/R2025a'
     // env.MW_RELATIVE_PROJECT_PATH = "<Project relative path from repository root>";  // e.g. "" or "relative/path/to/project/"
     env.MW_REMOTE_BUILD_CACHE_NAME = "$JOB_NAME"
     env.MW_PIPELINE_GEN_DIRECTORY = "_pipelineGen_"
