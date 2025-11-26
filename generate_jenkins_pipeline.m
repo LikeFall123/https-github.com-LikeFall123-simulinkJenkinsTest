@@ -8,7 +8,7 @@ function generate_jenkins_pipeline()
     remoteBuildCacheName = string(getenv('MW_REMOTE_BUILD_CACHE_NAME'));
     pipelineGenDirectory = string(getenv('MW_PIPELINE_GEN_DIRECTORY'));
 
-    cp = openProject(strcat(workspace,filesep,string(relativeProjectPath)));
+    cp = openProject("");
     op = padv.pipeline.JenkinsOptions;
     op.AgentLabel = "simulink-test-jenkins-agent-label";
     op.PipelineArchitecture = "SerialStagesGroupPerTask";
