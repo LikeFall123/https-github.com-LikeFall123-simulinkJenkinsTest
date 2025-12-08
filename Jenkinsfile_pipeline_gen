@@ -72,7 +72,8 @@ node('simulink-test-jenkins-agent-label'){
         archiveArtifacts artifacts: "${pipelineGenerationPath}/**", allowEmptyArchive: true
         pipelineUtils.loadEnvVariables(false, scmVars.GIT_COMMIT)
     }
-
-    load("${WORKSPACE}/${pipelineGenerationPath}/simulink_pipeline")
+    withEnv(["PATH=C:\\Program Files\\MATLAB\\R2025a\\bin;${env.PATH}"]) {
+        load("${WORKSPACE}/${pipelineGenerationPath}/simulink_pipeline")
+    }
 }
 
