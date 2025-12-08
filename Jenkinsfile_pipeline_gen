@@ -1,4 +1,33 @@
-stage('Setup & Generation'){
+// Define path variable outside to ensure scope visibility
+def pipelineGenerationPath = ""
+
+node('simulink-test-jenkins-agent-label'){
+    // --- FIX 1: GLOBAL CONFIGURATION ---
+    def sharedConfigDir = "C:\\Data\\Jenkins_Global_Config"
+    
+    // --- FIX 2: FORCE MATAB VERSION ---
+    // Prepend R2025a to the PATH. 
+    // This guarantees the generated pipeline picks R2025a, not any other version on the PC.
+    env.PATH = "C:\\Program Files\\MATLAB\\R2025a\\bin;${env.PATH}"
+    
+    // --- FIX 3: ENVIRONMENT VARIABLES ---
+    env.MW_SUPPORT_PACKAGE_ROOT = "C:\\ProgramData\\MATLAB\\SupportPackages\\R2025a"
+    env.MW_REMOTE_BUILD_CACHE_NAME = "$JOB_NAME"
+    env.MW_PIPELINE_GEN_DIRECTORY = "_pipelineGen_"
+    
+    // Force startup.m loading for ALL instances
+    env.MATLABPATH = sharedConfigDir 
+    
+    // Force Local Temp (fixes PID crashes)
+    env.TEMP = "${WORKSPACE}\\.matlab_temp"
+    env.TMP = "${WORKSPACE}\\.matlab_temp"
+
+    // Standard Configuration
+    def matlabExePath = "C:\\Program Files\\MATLAB\\R2025a\\bin\\matlab.exe"
+    def matlabSupportPkgRoot = "C:\\ProgramData\\MATLAB\\SupportPackages\\R2025a"
+    pipelineGenerationPath = "${env.MW_RELATIVE_PROJECT_PATH?:''}${env.MW_PIPELINE_GEN_DIRECTORY}"
+    
+    stage('Setup & Generation'){
         cleanWs(disableDeferredWipeout:true, deleteDirs:true)
         def scmVars = checkout scm
         
@@ -58,3 +87,5 @@ stage('Setup & Generation'){
         archiveArtifacts artifacts: "${pipelineGenerationPath}/**", allowEmptyArchive: true
         pipelineUtils.loadEnvVariables(false, scmVars.GIT_COMMIT)
     }
+    load("${WORKSPACE}/${pipelineGenerationPath}/simulink_pipeline")
+}
