@@ -2,77 +2,94 @@
 def pipelineGenerationPath = ""
 
 node('simulink-test-jenkins-agent-label'){
-
+    // --- FIX 1: GLOBAL CONFIGURATION ---
+    def sharedConfigDir = "C:\\Data\\Jenkins_Global_Config"
+    
+    // --- FIX 2: FORCE MATAB VERSION ---
+    // Prepend R2025a to the PATH. 
+    // This guarantees the generated pipeline picks R2025a, not any other version on the PC.
+    env.PATH = "C:\\Program Files\\MATLAB\\R2025a\\bin;${env.PATH}"
+    
+    // --- FIX 3: ENVIRONMENT VARIABLES ---
     env.MW_SUPPORT_PACKAGE_ROOT = "C:\\ProgramData\\MATLAB\\SupportPackages\\R2025a"
     env.MW_REMOTE_BUILD_CACHE_NAME = "$JOB_NAME"
     env.MW_PIPELINE_GEN_DIRECTORY = "_pipelineGen_"
-
-    // FIX START
-    env.MATLAB_PREFDIR = "${WORKSPACE}\\.matlab_prefs"
+    
+    // Force startup.m loading for ALL instances
+    env.MATLABPATH = sharedConfigDir 
+    
+    // Force Local Temp (fixes PID crashes)
     env.TEMP = "${WORKSPACE}\\.matlab_temp"
     env.TMP = "${WORKSPACE}\\.matlab_temp"
-    // FIX END
 
+    // Standard Configuration
     def matlabExePath = "C:\\Program Files\\MATLAB\\R2025a\\bin\\matlab.exe"
     def matlabSupportPkgRoot = "C:\\ProgramData\\MATLAB\\SupportPackages\\R2025a"
-    
     pipelineGenerationPath = "${env.MW_RELATIVE_PROJECT_PATH?:''}${env.MW_PIPELINE_GEN_DIRECTORY}"
     
-    stage('Pipeline Generation'){
+    stage('Setup & Generation'){
         cleanWs(disableDeferredWipeout:true, deleteDirs:true)
         def scmVars = checkout scm
-
-        // --- FIX START: CREATE startup.m ---
-        writeFile file: 'startup.m', text: """
+        
+        // --- FIX 4: ROBUST STARTUP.M ---
+        bat "if not exist \"${sharedConfigDir}\" mkdir \"${sharedConfigDir}\""
+        
+        // This script now handles Temp creation AND adding Support Packages
+        // It will run for EVERY MATLAB instance (Gen path AND Generated Pipeline)
+        writeFile file: "${sharedConfigDir}\\startup.m", text: """
+            % 1. Fix Temp Directory (PID Issue)
             try
-                % 1. Get the root temp dir (env var TEMP)
                 tempRoot = getenv('TEMP');
-                
-                % 2. Get the current MATLAB Process ID (PID)
-                myPid = feature('getpid');
-                
-                % 3. Construct the exact path Simulink will use
-                pidDir = fullfile(tempRoot, num2str(myPid));
-
-                % Get the temp directory MATLAB wants to use (includes PID)
-                % td = tempdir;
-                if ~isfolder(pidDir)
-                    mkdir(pidDir);
-                    fprintf('### startup.m: Created missing temp dir: %s\\n', pidDir);
-                else
-                    fprintf('### startup.m: Temp dir exists: %s\\n', pidDir);
+                if ~isempty(tempRoot)
+                    myPid = feature('getpid');
+                    pidDir = fullfile(tempRoot, num2str(myPid));
+                    if ~isfolder(pidDir)
+                        mkdir(pidDir);
+                        fprintf('### startup.m: Created PID temp dir: %s\\n', pidDir);
+                    end
                 end
             catch ME
-                fprintf('### startup.m: Failed to create temp dir. %s\\n', ME.message);
+                fprintf('### startup.m: Temp dir setup failed: %s\\n', ME.message);
+            end
+            
+            % 2. Add Support Packages to Path
+            try
+                spRoot = getenv('MW_SUPPORT_PACKAGE_ROOT');
+                if ~isempty(spRoot) && isfolder(spRoot)
+                    addpath(genpath(spRoot));
+                    fprintf('### startup.m: Added Support Package Root: %s\\n', spRoot);
+                else
+                    fprintf('### startup.m: MW_SUPPORT_PACKAGE_ROOT not set or invalid.\\n');
+                end
+            catch ME
+                fprintf('### startup.m: Path setup failed: %s\\n', ME.message);
             end
         """
-        // --- FIX END ---
-
-        // FIX START
-        bat "if not exist \"${env.MATLAB_PREFDIR}\" mkdir \"${env.MATLAB_PREFDIR}\""
+        
+        // Create local temp for this stage
         bat "if not exist \"${env.TEMP}\" mkdir \"${env.TEMP}\""
-        // FIX END
 
+        // Copy Utilities
         def command = "copy /Y \"${matlabSupportPkgRoot}\\toolbox\\padv\\pipeline_generator\\ci\\templates\\jenkins\\MW_PipelineUtils.groovy\" \"$WORKSPACE\""
         bat(command)
         
+        // Generate Pipeline
         def pipelineUtils = load("$WORKSPACE/MW_PipelineUtils.groovy")
-
-        // Remove Simulink.fileGenControl -> Pipeline Success, but no CI run
+        
+        // Note: We use the specific EXE here, but the PATH env var above 
+        // ensures the generated pipeline also finds this exact version.
         def matlabCommand = """
             "${matlabExePath}" -batch "
-            addpath(genpath('${matlabSupportPkgRoot}')); 
-            addpath('$WORKSPACE');
+            addpath('$WORKSPACE'); 
             generate_jenkins_pipeline();"
         """
         
         matlabCommand = matlabCommand.replaceAll("\n", "").replaceAll("  ", "")
         pipelineUtils.runShellCommand(matlabCommand, false)
+        
         stash includes:"${pipelineGenerationPath}/**", name:'pipeline_generated_files'
         archiveArtifacts artifacts: "${pipelineGenerationPath}/**", allowEmptyArchive: true
         pipelineUtils.loadEnvVariables(false, scmVars.GIT_COMMIT)
     }
-
     load("${WORKSPACE}/${pipelineGenerationPath}/simulink_pipeline")
 }
-
