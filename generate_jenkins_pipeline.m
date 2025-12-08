@@ -59,6 +59,6 @@ function generate_jenkins_pipeline()
     % op.AddBatchStartupOption = false;
 
     % Forcing rerun (not just icremental build, if changes were detected)
-    op.ForceRun = true; 
+    % op.ForceRun = true; 
     padv.pipeline.generatePipeline(op, "CIPipeline");
 end
