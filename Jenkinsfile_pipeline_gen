@@ -32,7 +32,6 @@ node('simulink-test-jenkins-agent-label'){
             "${matlabExePath}" -batch "
             addpath(genpath('${matlabSupportPkgRoot}')); 
             addpath('$WORKSPACE'); 
-            ver; 
             generate_jenkins_pipeline();"
         """
         

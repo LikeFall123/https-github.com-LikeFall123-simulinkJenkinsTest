@@ -8,6 +8,26 @@ function generate_jenkins_pipeline()
     remoteBuildCacheName = string(getenv('MW_REMOTE_BUILD_CACHE_NAME'));
     pipelineGenDirectory = string(getenv('MW_PIPELINE_GEN_DIRECTORY'));
 
+    localWorkDir = fullfile(workspace, 'work');
+    if ~isfolder(localWorkDir)
+        mkdir(localWorkDir);
+    end
+
+    fprintf('### Setting Simulink FileGenControl to workspace: %s\n', localWorkDir);
+    try
+        Simulink.fileGenControl('set', ...
+            'CacheFolder', localWorkDir, ...
+            'CodeGenFolder', localWorkDir, ...
+            'createDir', true);
+    catch ME
+        warning('Initial FileGenControl setup failed. Attempting reset. Error: %s', ME.message);
+        Simulink.fileGenControl('reset');
+        Simulink.fileGenControl('set', ...
+            'CacheFolder', localWorkDir, ...
+            'CodeGenFolder', localWorkDir, ...
+            'createDir', true);
+    end
+
     cp = openProject("");
     op = padv.pipeline.JenkinsOptions;
     op.AgentLabel = "simulink-test-jenkins-agent-label";
