@@ -6,12 +6,14 @@ node('simulink-test-jenkins-agent-label'){
     env.MW_SUPPORT_PACKAGE_ROOT = "C:\\ProgramData\\MATLAB\\SupportPackages\\R2025a"
     env.MW_REMOTE_BUILD_CACHE_NAME = "$JOB_NAME"
     env.MW_PIPELINE_GEN_DIRECTORY = "_pipelineGen_"
-    
-    // 1. CONFIGURATION (HARDCODED FOR R2025a)
-    // The Executable: We point directly to the R2025a exe (Bypass system PATH)
+
+    // FIX START
+    env.MATLAB_PREFDIR = "${WORKSPACE}\\.matlab_prefs"
+    env.TEMP = "${WORKSPACE}\\.matlab_temp"
+    env.TMP = "${WORKSPACE}\\.matlab_temp"
+    // FIX END
+
     def matlabExePath = "C:\\Program Files\\MATLAB\\R2025a\\bin\\matlab.exe"
-    
-    // The Support Package: We point to the R2025a support packages
     def matlabSupportPkgRoot = "C:\\ProgramData\\MATLAB\\SupportPackages\\R2025a"
     
     pipelineGenerationPath = "${env.MW_RELATIVE_PROJECT_PATH?:''}${env.MW_PIPELINE_GEN_DIRECTORY}"
@@ -19,24 +21,25 @@ node('simulink-test-jenkins-agent-label'){
     stage('Pipeline Generation'){
         cleanWs(disableDeferredWipeout:true, deleteDirs:true)
         def scmVars = checkout scm
-        
-        // 2. COPY UTILITIES
+
+        // FIX START
+        bat "if not exist \"${env.MATLAB_PREFDIR}\" mkdir \"${env.MATLAB_PREFDIR}\""
+        bat "if not exist \"${env.TEMP}\" mkdir \"${env.TEMP}\""
+        // FIX END
+
         def command = "copy /Y \"${matlabSupportPkgRoot}\\toolbox\\padv\\pipeline_generator\\ci\\templates\\jenkins\\MW_PipelineUtils.groovy\" \"$WORKSPACE\""
         bat(command)
         
-        // 3. GENERATE PIPELINE
         def pipelineUtils = load("$WORKSPACE/MW_PipelineUtils.groovy")
-        
-        // 4. CONSTRUCT THE COMMAND
         def matlabCommand = """
             "${matlabExePath}" -batch "
             addpath(genpath('${matlabSupportPkgRoot}')); 
             addpath('$WORKSPACE');
-            Simulink.fileGenControl('set', 'CacheFolder', '${WORKSPACE}','CodeGenFolder', '${WORKSPACE}', 'createDir', true);
+            // Remove this -> Pipeline Success, but no CI run
+            Simulink.fileGenControl('set', 'CacheFolder', '${WORKSPACE}\\work','CodeGenFolder', '${WORKSPACE}\\work', 'createDir', true);
             generate_jenkins_pipeline();"
         """
         
-        // Clean up the command string for batch execution
         matlabCommand = matlabCommand.replaceAll("\n", "").replaceAll("  ", "")
         pipelineUtils.runShellCommand(matlabCommand, false)
         stash includes:"${pipelineGenerationPath}/**", name:'pipeline_generated_files'
