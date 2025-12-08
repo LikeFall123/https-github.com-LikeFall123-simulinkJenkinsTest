@@ -25,13 +25,22 @@ node('simulink-test-jenkins-agent-label'){
         // --- FIX START: CREATE startup.m ---
         writeFile file: 'startup.m', text: """
             try
+                % 1. Get the root temp dir (env var TEMP)
+                tempRoot = getenv('TEMP');
+                
+                % 2. Get the current MATLAB Process ID (PID)
+                myPid = feature('getpid');
+                
+                % 3. Construct the exact path Simulink will use
+                pidDir = fullfile(tempRoot, num2str(myPid));
+
                 % Get the temp directory MATLAB wants to use (includes PID)
-                td = tempdir;
-                if ~isfolder(td)
-                    mkdir(td);
-                    fprintf('### startup.m: Created missing temp dir: %s\\n', td);
+                % td = tempdir;
+                if ~isfolder(pidDir)
+                    mkdir(pidDir);
+                    fprintf('### startup.m: Created missing temp dir: %s\\n', pidDir);
                 else
-                    fprintf('### startup.m: Temp dir exists: %s\\n', td);
+                    fprintf('### startup.m: Temp dir exists: %s\\n', pidDir);
                 end
             catch ME
                 fprintf('### startup.m: Failed to create temp dir. %s\\n', ME.message);
