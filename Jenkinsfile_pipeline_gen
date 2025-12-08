@@ -22,6 +22,23 @@ node('simulink-test-jenkins-agent-label'){
         cleanWs(disableDeferredWipeout:true, deleteDirs:true)
         def scmVars = checkout scm
 
+        // --- FIX START: CREATE startup.m ---
+        writeFile file: 'startup.m', text: """
+            try
+                % Get the temp directory MATLAB wants to use (includes PID)
+                td = tempdir;
+                if ~isfolder(td)
+                    mkdir(td);
+                    fprintf('### startup.m: Created missing temp dir: %s\\n', td);
+                else
+                    fprintf('### startup.m: Temp dir exists: %s\\n', td);
+                end
+            catch ME
+                fprintf('### startup.m: Failed to create temp dir. %s\\n', ME.message);
+            end
+        """
+        // --- FIX END ---
+
         // FIX START
         bat "if not exist \"${env.MATLAB_PREFDIR}\" mkdir \"${env.MATLAB_PREFDIR}\""
         bat "if not exist \"${env.TEMP}\" mkdir \"${env.TEMP}\""
@@ -37,7 +54,6 @@ node('simulink-test-jenkins-agent-label'){
             "${matlabExePath}" -batch "
             addpath(genpath('${matlabSupportPkgRoot}')); 
             addpath('$WORKSPACE');
-            Simulink.fileGenControl('set', 'CacheFolder', '${WORKSPACE}\\work','CodeGenFolder', '${WORKSPACE}\\work', 'createDir', true);
             generate_jenkins_pipeline();"
         """
         
