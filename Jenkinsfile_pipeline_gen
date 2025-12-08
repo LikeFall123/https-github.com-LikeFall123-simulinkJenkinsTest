@@ -32,6 +32,7 @@ node('simulink-test-jenkins-agent-label'){
             "${matlabExePath}" -batch "
             addpath(genpath('${matlabSupportPkgRoot}')); 
             addpath('$WORKSPACE'); 
+            cd('$WORKSPACE');
             Simulink.fileGenControl('set', 'CacheFolder', '$WORKSPACE', 'CodeGenFolder', '$WORKSPACE', 'createDir', true);
             ver; 
             generate_jenkins_pipeline();"
