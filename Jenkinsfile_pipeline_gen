@@ -45,7 +45,10 @@ node('simulink-test-jenkins-agent-label'){
         archiveArtifacts artifacts: "${pipelineGenerationPath}/**", allowEmptyArchive: true
         pipelineUtils.loadEnvVariables(false, scmVars.GIT_COMMIT)
     }
+
+    stage('Simulink Pipeline'){
+        // 5. EXECUTE THE TESTS
+        load("${WORKSPACE}/${pipelineGenerationPath}/simulink_pipeline")
+    }
 }
 
-// 5. EXECUTE THE TESTS
-load("${WORKSPACE}/${pipelineGenerationPath}/simulink_pipeline")
