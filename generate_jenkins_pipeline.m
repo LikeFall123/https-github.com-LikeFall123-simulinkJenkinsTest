@@ -57,5 +57,8 @@ function generate_jenkins_pipeline()
     % op.MatlabLaunchCmd = "xvfb-run -a matlab -batch"; 
     % op.MatlabStartupOptions = "";
     % op.AddBatchStartupOption = false;
+
+    % Forcing rerun (not just icremental build, if changes were detected)
+    op.ForceRun = true; 
     padv.pipeline.generatePipeline(op, "CIPipeline");
 end
