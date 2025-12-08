@@ -31,11 +31,12 @@ node('simulink-test-jenkins-agent-label'){
         bat(command)
         
         def pipelineUtils = load("$WORKSPACE/MW_PipelineUtils.groovy")
+
+        // Remove Simulink.fileGenControl -> Pipeline Success, but no CI run
         def matlabCommand = """
             "${matlabExePath}" -batch "
             addpath(genpath('${matlabSupportPkgRoot}')); 
             addpath('$WORKSPACE');
-            // Remove this -> Pipeline Success, but no CI run
             Simulink.fileGenControl('set', 'CacheFolder', '${WORKSPACE}\\work','CodeGenFolder', '${WORKSPACE}\\work', 'createDir', true);
             generate_jenkins_pipeline();"
         """
