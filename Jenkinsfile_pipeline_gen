@@ -2,6 +2,10 @@
 def pipelineGenerationPath = ""
 
 node('simulink-test-jenkins-agent-label'){
+
+    env.MW_SUPPORT_PACKAGE_ROOT = "C:\\ProgramData\\MATLAB\\SupportPackages\\R2025a"
+    env.MW_REMOTE_BUILD_CACHE_NAME = "$JOB_NAME"
+    env.MW_PIPELINE_GEN_DIRECTORY = "_pipelineGen_"
     
     // 1. CONFIGURATION (HARDCODED FOR R2025a)
     // The Executable: We point directly to the R2025a exe (Bypass system PATH)
@@ -24,9 +28,6 @@ node('simulink-test-jenkins-agent-label'){
         def pipelineUtils = load("$WORKSPACE/MW_PipelineUtils.groovy")
         
         // 4. CONSTRUCT THE COMMAND
-        // We use the full path to matlab.exe
-        // We force the PATH to include support packages
-        // We force the Cache/CodeGen folders to the WORKSPACE (Fixes the 'peter.zabos' permission error)
         def matlabCommand = """
             "${matlabExePath}" -batch "
             addpath(genpath('${matlabSupportPkgRoot}')); 
@@ -38,17 +39,12 @@ node('simulink-test-jenkins-agent-label'){
         
         // Clean up the command string for batch execution
         matlabCommand = matlabCommand.replaceAll("\n", "").replaceAll("  ", "")
-
         pipelineUtils.runShellCommand(matlabCommand, false)
-        
         stash includes:"${pipelineGenerationPath}/**", name:'pipeline_generated_files'
         archiveArtifacts artifacts: "${pipelineGenerationPath}/**", allowEmptyArchive: true
         pipelineUtils.loadEnvVariables(false, scmVars.GIT_COMMIT)
     }
 
-    stage('Simulink Pipeline'){
-        // 5. EXECUTE THE TESTS
-        load("${WORKSPACE}/${pipelineGenerationPath}/simulink_pipeline")
-    }
+    load("${WORKSPACE}/${pipelineGenerationPath}/simulink_pipeline")
 }
 
